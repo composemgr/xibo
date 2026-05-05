@@ -50,9 +50,9 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/xibo` - Data storage
-- `./rootfs/config/xibo` - Data storage
-- `./rootfs/data/db/mariadb/xibo` - Data storage
+- `./volumes/data/xibo` - Data storage
+- `./volumes/config/xibo` - Data storage
+- `./volumes/data/db/mariadb/xibo` - Data storage
 
 ## 🔐 Security
 
