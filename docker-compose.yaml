@@ -17,10 +17,14 @@ services:
     logging: *default-logging
     networks:
       - xibo
+      - proxy
+      - cloudflare
     ports:
       - "172.17.0.1:8094:80"
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: xibo-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
       MYSQL_HOST: xibo-db
       MYSQL_DATABASE: ${DB_CREATE_DATABASE_NAME:-xibo}
       MYSQL_USER: ${DB_USER_NAME:-xibo}
@@ -35,6 +39,22 @@ services:
     depends_on:
       xibo-db:
         condition: service_healthy
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://xibo-app:80'
+      - 'cloudflare.hostname=xibo.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.xibo-app.entrypoints=http'
+      - 'traefik.http.routers.xibo-app-secure.tls=true'
+      - 'traefik.http.routers.xibo-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.xibo-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.xibo-app.middlewares=xibo-app-https-redirect'
+      - 'traefik.http.routers.xibo-app-secure.entrypoints=https'
+      - 'traefik.http.routers.xibo-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.xibo-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.xibo-app-secure.service=xibo-app'
+      - 'traefik.http.services.xibo-app.loadbalancer.server.port=80'
 
   xibo-xmr:
     image: xibosignage/xibo-xmr:latest
@@ -46,6 +66,7 @@ services:
       - xibo
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: xibo-xmr
 
   xibo-db:
     image: mariadb:latest
@@ -57,6 +78,7 @@ services:
       - xibo
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: xibo-db
       MARIADB_DATABASE: ${DB_CREATE_DATABASE_NAME:-xibo}
       MARIADB_USER: ${DB_USER_NAME:-xibo}
       MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
@@ -73,3 +95,7 @@ networks:
   xibo:
     name: xibo
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
