@@ -1,5 +1,6 @@
 # nginx proxy address - http://172.17.0.1:8094
 
+name: xibo
 x-logging: &default-logging
   driver: json-file
   options:
@@ -9,25 +10,48 @@ x-logging: &default-logging
 services:
   xibo:
     image: xibosignage/xibo-cms:latest
+    pull_policy: always
     container_name: xibo-app
-    restart: unless-stopped
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
     logging: *default-logging
     networks:
       - xibo
     ports:
-      - "8094:80"
+      - "172.17.0.1:8094:80"
     environment:
       TZ: ${TZ:-America/New_York}
+      MYSQL_HOST: xibo-db
+      MYSQL_DATABASE: ${DB_CREATE_DATABASE_NAME:-xibo}
+      MYSQL_USER: ${DB_USER_NAME:-xibo}
+      MYSQL_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_admin_password}
+      XMR_HOST: xibo-xmr
+      XMR_PUB_ADDRESS: tcp://xibo-xmr:9505
+      XIBO_DEV_MODE: "false"
     volumes:
-      - ./volumes/data/xibo:/data
-      - ./volumes/config/xibo:/config
+      - ./volumes/data/xibo/cms:/var/www/cms/custom
+      - ./volumes/data/xibo/library:/var/www/cms/library
     depends_on:
-      - xibo-db
+      xibo-db:
+        condition: service_healthy
+
+  xibo-xmr:
+    image: xibosignage/xibo-xmr:latest
+    pull_policy: always
+    container_name: xibo-xmr
+    restart: always
+    logging: *default-logging
+    networks:
+      - xibo
+    environment:
+      TZ: ${TZ:-America/New_York}
 
   xibo-db:
-    image: mariadb:11
+    image: mariadb:latest
+    pull_policy: always
     container_name: xibo-db
-    restart: unless-stopped
+    restart: always
     logging: *default-logging
     networks:
       - xibo
@@ -36,7 +60,7 @@ services:
       MARIADB_DATABASE: ${DB_CREATE_DATABASE_NAME:-xibo}
       MARIADB_USER: ${DB_USER_NAME:-xibo}
       MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
-      MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_root_password}
+      MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_admin_password}
     volumes:
       - ./volumes/data/db/mariadb/xibo:/var/lib/mysql
     healthcheck:
@@ -47,4 +71,5 @@ services:
 
 networks:
   xibo:
+    name: xibo
     external: false
