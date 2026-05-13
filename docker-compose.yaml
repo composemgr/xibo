@@ -29,7 +29,6 @@ services:
       MYSQL_DATABASE: ${DB_CREATE_DATABASE_NAME:-xibo}
       MYSQL_USER: ${DB_USER_NAME:-xibo}
       MYSQL_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
-      MYSQL_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_admin_password}
       XMR_HOST: xibo-xmr
       XMR_PUB_ADDRESS: tcp://xibo-xmr:9505
       XIBO_DEV_MODE: "false"
