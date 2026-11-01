@@ -4,16 +4,18 @@ Open-source digital signage content management system
 
 ## 📋 Description
 
-Open-source digital signage content management system
+Xibo for the Web is a digital signage CMS for publishing media to screens over
+the browser. This stack runs the Xibo CMS, the Xibo Media Manager (XMR), and a
+MariaDB backend behind the host nginx proxy.
 
 ## 🚀 Services
 
-- **xibo**: xibosignage/xibo-cms:latest
+- **app**: xibosignage/xibo-cms:latest
+- **xibo-xmr**: xibosignage/xibo-xmr:latest (media upload/encoding)
 
 ### Infrastructure Components
 
 - **xibo-db**: Mariadb database
-
 
 ## 📦 Installation
 
@@ -26,7 +28,8 @@ curl -q -LSsf "https://raw.githubusercontent.com/composemgr/xibo/main/docker-com
 ```bash
 git clone "https://github.com/composemgr/xibo" ~/.local/srv/docker/xibo
 cd ~/.local/srv/docker/xibo
-docker compose up -d
+cp default.env .env
+docker compose --env-file .env up -d
 ```
 
 ### Option 3: Using composemgr
@@ -40,51 +43,89 @@ composemgr install xibo
 
 ```shell
 TZ=America/New_York
+DB_USER_NAME=xibo
+DB_USER_PASS=replace-with-a-random-password
+DB_ADMIN_PASS=replace-with-a-random-password
+DB_CREATE_DATABASE_NAME=xibo
 ```
 
 See `docker-compose.yaml` for complete list of configurable options.
 
+### Environment Files
+
+`default.env.sample` holds the full set of variables and is copied to `.env`
+before starting the stack:
+
+```bash
+cp default.env .env
+docker compose --env-file .env up -d
+```
+
+`app.env.sample` holds the app-specific overrides and is copied to `app.env`:
+
+```bash
+cp app.env.sample app.env
+```
+
+`composemgr up` applies `app.env` and `default.env` automatically. Raw
+`docker compose` commands need `--env-file .env` to pick up the same values.
+
+### Reverse Proxy
+
+Three standalone compose files ship in this repo:
+
+| File | Use |
+|------|-----|
+| `docker-compose.yaml` | Default, published on `172.17.0.1:64392` |
+| `docker-compose.traefik.yaml` | Behind an existing external `traefik` network |
+| `docker-compose.tunnel.yaml` | Behind an existing external `cloudflare` tunnel network |
+
+```bash
+docker compose -f docker-compose.traefik.yaml --env-file .env up -d
+```
+
 ## 🌐 Access
 
-- **Web Interface**: http://172.17.0.1:8094
+- **Web Interface**: http://172.17.0.1:64392
 
 ## 📂 Volumes
 
-- `./volumes/data/xibo` - Data storage
-- `./volumes/config/xibo` - Data storage
-- `./volumes/data/db/mariadb/xibo` - Data storage
+- `./volumes/data/xibo/cms` - CMS custom themes and configuration
+- `./volumes/data/xibo/library` - Media library
+- `./volumes/db/mariadb/xibo` - Database data
 
 ## 🔐 Security
 
 - Change all default passwords before deploying to production
 - Use strong secrets for all authentication tokens
-- Configure HTTPS using a reverse proxy (nginx, traefik, caddy)
+- The database and XMR are reachable only on the internal project network
+- Use HTTPS via the reverse proxy in production
 - Regularly update Docker images for security patches
 - Backup your data regularly
 
 ## 🔍 Logging
 
 ```shell
-docker compose logs -f xibo
+docker compose --env-file .env logs -f app
 ```
 
 ## 🛠️ Management
 
 ```bash
 # Start services
-docker compose up -d
+docker compose --env-file .env up -d
 
 # Stop services
-docker compose down
+docker compose --env-file .env down
 
 # Update to latest images
-docker compose pull && docker compose up -d
+docker compose --env-file .env pull && docker compose --env-file .env up -d
 
 # View logs
-docker compose logs -f
+docker compose --env-file .env logs -f
 
 # Restart services
-docker compose restart
+docker compose --env-file .env restart
 ```
 
 ## 📋 Requirements

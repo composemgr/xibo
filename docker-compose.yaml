@@ -1,26 +1,21 @@
-# nginx proxy address - http://172.17.0.1:8094
+# nginx proxy address - http://172.17.0.1:64392
 
 name: xibo
 x-logging: &default-logging
-  driver: json-file
   options:
-    max-size: "5m"
-    max-file: "1"
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
 
 services:
-  xibo:
+  app:
     image: xibosignage/xibo-cms:latest
-    pull_policy: always
     container_name: xibo-app
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
     hostname: ${BASE_HOST_NAME:-$HOSTNAME}
     restart: always
+    pull_policy: always
     logging: *default-logging
-    networks:
-      - xibo
-      - proxy
-      - cloudflare
-    ports:
-      - "172.17.0.1:8094:80"
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: xibo-app
@@ -28,73 +23,64 @@ services:
       MYSQL_HOST: xibo-db
       MYSQL_DATABASE: ${DB_CREATE_DATABASE_NAME:-xibo}
       MYSQL_USER: ${DB_USER_NAME:-xibo}
-      MYSQL_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      MYSQL_PASSWORD: ${DB_USER_PASS:-replace-with-a-random-password}
+      MYSQL_PASSWORD_ADMIN: ${DB_ADMIN_PASS:-replace-with-a-random-password}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_general_ci
       XMR_HOST: xibo-xmr
       XMR_PUB_ADDRESS: tcp://xibo-xmr:9505
-      XIBO_DEV_MODE: "false"
+      XIBO_DEV_MODE: 'false'
+    ports:
+      - '172.17.0.1:64392:80'
     volumes:
-      - ./volumes/data/xibo/cms:/var/www/cms/custom
-      - ./volumes/data/xibo/library:/var/www/cms/library
+      - './volumes/data/xibo/cms:/var/www/cms/custom:z'
+      - './volumes/data/xibo/library:/var/www/cms/library:z'
     depends_on:
       xibo-db:
         condition: service_healthy
-    labels:
-      - 'traefik.enable=true'
-      - 'cloudflare.enable=true'
-      - 'traefik.docker.network=proxy'
-      - 'cloudflare.service=http://xibo-app:80'
-      - 'cloudflare.hostname=xibo.${CLOUDFLARE_ZONE_NAME:-}'
-      - 'traefik.http.routers.xibo-app.entrypoints=http'
-      - 'traefik.http.routers.xibo-app-secure.tls=true'
-      - 'traefik.http.routers.xibo-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.middlewares.xibo-app-https-redirect.redirectscheme.scheme=https'
-      - 'traefik.http.routers.xibo-app.middlewares=xibo-app-https-redirect'
-      - 'traefik.http.routers.xibo-app-secure.entrypoints=https'
-      - 'traefik.http.routers.xibo-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.routers.xibo-app-secure.tls.certresolver=cloudflare'
-      - 'traefik.http.routers.xibo-app-secure.service=xibo-app'
-      - 'traefik.http.services.xibo-app.loadbalancer.server.port=80'
+    networks:
+      - xibo
 
   xibo-xmr:
     image: xibosignage/xibo-xmr:latest
-    pull_policy: always
     container_name: xibo-xmr
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: xibo-xmr
     restart: always
+    pull_policy: always
     logging: *default-logging
-    networks:
-      - xibo
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: xibo-xmr
+    networks:
+      - xibo
 
   xibo-db:
     image: mariadb:latest
-    pull_policy: always
     container_name: xibo-db
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: xibo-db
     restart: always
+    pull_policy: always
     logging: *default-logging
-    networks:
-      - xibo
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: xibo-db
       MARIADB_DATABASE: ${DB_CREATE_DATABASE_NAME:-xibo}
       MARIADB_USER: ${DB_USER_NAME:-xibo}
-      MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
-      MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_admin_password}
+      MARIADB_PASSWORD: ${DB_USER_PASS:-replace-with-a-random-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-replace-with-a-random-password}
     volumes:
-      - ./volumes/data/db/mariadb/xibo:/var/lib/mysql
+      - './volumes/db/mariadb/xibo:/var/lib/mysql:z'
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - xibo
 
 networks:
   xibo:
     name: xibo
     external: false
-  proxy:
-    external: true
-  cloudflare:
-    external: true
