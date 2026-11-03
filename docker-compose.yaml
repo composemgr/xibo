@@ -30,6 +30,12 @@ services:
       XMR_HOST: xibo-xmr
       XMR_PUB_ADDRESS: tcp://xibo-xmr:9505
       XIBO_DEV_MODE: 'false'
+    healthcheck:
+      test: ['CMD', 'curl', '-s', '-o', '/dev/null', '--max-time', '5', 'http://127.0.0.1:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     ports:
       - '172.17.0.1:64392:80'
     volumes:
@@ -52,6 +58,12 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: xibo-xmr
+    healthcheck:
+      test: ['CMD', 'nc', '-z', '127.0.0.1', '9505']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - xibo
 
